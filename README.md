@@ -1,3 +1,4 @@
+![AD8PA Navigator Interface](HamClockNav.png)
 # AD8PA HamClock Navigator (v2.1)
 
 A lightweight, single-file browser utility designed to remotely control a **HamClock** via its REST API. This tool provides quick "one-click" navigation for map projections and intuitive tabbed control over data pane rotations.
@@ -35,4 +36,5 @@ To view your HamClock live stream alongside this utility in your browser, naviga
 * **Out of Sync**: If you change pane settings directly on the HamClock hardware, you will need to manually update the checkboxes in the Navigator to keep them in sync.
 
 ---
+
 **Created by:** AD8PA | **License:** MIT
