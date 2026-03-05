@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AD8PA HamClock Navigator v2.1</title>
+    <style>
+        /* AD8PA HAMCLOCK MAP NAVIGATOR V2.1
+           Created by: AD8PA
+           Date: 2026JAN25
+           License: MIT License
+
+           CHANGE LOG:
+           - V1.0: Release for ham club feedback
+           - V2.0: Added pane setting drop down menu for panel view selections
+           - V2.1: Persistent Pane State (Sticky Checkboxes) using localStorage
+
+           PERMISSION:
+           Permission is hereby granted, free of charge, to any person obtaining a copy
+           of this software and associated documentation files (the "Software"), to deal 
+           in the Software without restriction, including without limitation the rights
+           to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
+           copies of the Software.[PASTE YOUR AUTHOR / LICENSE / CHANGE LOG INFO HERE]
+		 */
+
+        body { background-color: #0f0f0f; display: flex; justify-content: center; padding: 10px; margin: 0; overflow-x: hidden; }
+        .card { 
+            font-family: 'Segoe UI', sans-serif; 
+            padding: 16px; border: 1px solid #2a2a2a; width: 340px; 
+            background: #181818; color: #d0d0d0; border-radius: 8px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+        }
+        h3 { 
+            margin: 0 0 12px 0; color: #ff3d00; text-transform: uppercase; font-size: 11px; 
+            border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; display: flex; 
+            justify-content: space-between; align-items: center; letter-spacing: 1px;
+        }
+        label { font-size: 9px; font-weight: bold; color: #666; text-transform: uppercase; display: block; margin: 10px 0 4px 0; }
+        .row { display: flex; gap: 8px; align-items: flex-end; }
+        input[type="text"] { 
+            width: 100%; padding: 6px; background: #222; border: 1px solid #333; 
+            color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 12px; 
+        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        
+        button { 
+            padding: 8px 4px; background: #2a2a2a; color: #eee; border: 1px solid #3a3a3a; 
+            cursor: pointer; border-radius: 4px; font-size: 11px; font-weight: 500;
+        }
+        button:hover { background: #333; }
+        button:active { transform: scale(0.98); background: #ff3d0044; }
+        
+        .btn-blue { background: #0d47a1; border: none; }
+        .btn-robinson { background: #3e2723; border: 1px solid #5d4037; color: #d7ccc8; }
+        .btn-green { background: #1b5e20; border: none; color: #fff; }
+        .btn-red { background: #b71c1c; border: none; color: #fff; }
+        .btn-reset { background: #333; grid-column: span 2; border-style: dashed; color: #888; margin-top: 4px; }
+        .btn-orange { background: #e65100; border: none; color: #fff; margin-top: 10px; width: 100%; font-weight: bold; }
+        
+        #status { width: 6px; height: 6px; background: #222; border-radius: 50%; }
+        .flash { background: #00e676 !important; box-shadow: 0 0 6px #00e676; }
+
+        /* Pane Manager Styling from v1.3 Baseline */
+        #pane-section { display: none; margin-top: 15px; border-top: 1px solid #ff3d0033; padding-top: 10px; }
+        .tabs { display: flex; gap: 2px; margin-bottom: 10px; }
+        .tab-btn { flex: 1; background: #222; border: 1px solid #333; padding: 6px; font-size: 10px; color: #888; }
+        .tab-btn.active { background: #ff3d00; color: #fff; border: none; }
+        
+        .checkbox-list { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 4px; 
+            max-height: 300px; overflow-y: auto; padding-right: 5px;
+        }
+        .cb-item { 
+            display: flex; align-items: center; gap: 6px; background: #222; 
+            padding: 4px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;
+        }
+        .cb-item:hover { background: #2a2a2a; }
+        .cb-item input { cursor: pointer; margin: 0; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h3>AD8PA HAMCLOCK NAVIGATOR v2.1 <span id="status"></span></h3>
+    
+    <div class="row">
+        <div style="flex:1">
+            <label style="margin-top:0">IP</label>
+            <input type="text" id="hc_ip" placeholder="192.168.1.x">
+        </div>
+        <div style="flex:1">
+            <label style="margin-top:0">QTH LNG</label>
+            <input type="text" id="qth_lng" placeholder="-83.4">
+        </div>
+        <button onclick="goHome()" class="btn-blue" style="height: 29px; padding: 0 10px;">HOME</button>
+    </div>
+    
+    <label>ROBINSON GLOBAL</label>
+    <div class="grid-3">
+        <button onclick="setRobinson('-95')" class="btn-robinson">Americas</button>
+        <button onclick="setRobinson('30')" class="btn-robinson">EU/AF</button>
+        <button onclick="setRobinson('135')" class="btn-robinson">AS/OC</button>
+    </div>
+
+    <label>MERCATOR ZOOM</label>
+    <div class="grid">
+        <button onclick="safePan('-160', '65', '3')">N. America</button>
+        <button onclick="safePan('30', '95', '3')">Europe</button>
+        <button onclick="safePan('-100', '-30', '2')">S. America</button>
+        <button onclick="safePan('30', '0', '2')">Africa</button>
+        <button onclick="safePan('220', '75', '2')">Asia</button>
+        <button onclick="safePan('310', '-30', '2')">Oceania</button>
+        <button onclick="safePan('0', '0', '1')" class="btn-reset">FULL MAP RESET</button>
+    </div>
+
+    <div class="grid" style="margin-top: 5px;">
+        <div class="col">
+            <label>RSS FEED</label>
+            <div class="grid">
+                <button onclick="setRSS('on')" class="btn-green">ON</button>
+                <button onclick="setRSS('off')" class="btn-red">OFF</button>
+            </div>
+        </div>
+        <div class="col">
+            <label>NIGHT SHADE</label>
+            <div class="grid">
+                <button onclick="setNight('on')" class="btn-green">ON</button>
+                <button onclick="setNight('off')" class="btn-red">OFF</button>
+            </div>
+        </div>
+    </div>
+
+    <button onclick="togglePaneSection()" class="btn-orange">PANE SETTINGS ⚙</button>
+
+    <div id="pane-section">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab(0)">PANE 0</button>
+            <button class="tab-btn" onclick="showTab(1)">PANE 1</button>
+            <button class="tab-btn" onclick="showTab(2)">PANE 2</button>
+            <button class="tab-btn" onclick="showTab(3)">PANE 3</button>
+        </div>
+        <div id="cb-container" class="checkbox-list"></div>
+    </div>
+</div>
+
+<script>
+    window.resizeTo(385, 540); 
+
+    const ipInput = document.getElementById('hc_ip');
+    const qthInput = document.getElementById('qth_lng');
+    const statusDot = document.getElementById('status');
+    let activeTab = 0;
+
+    // Load persistent pane state or default to empty lists [cite: 1, 2]
+    const savedPaneState = localStorage.getItem('paneState');
+    const paneState = savedPaneState ? JSON.parse(savedPaneState) : { 0: [], 1: [], 2: [], 3: [] };
+
+    const p0_Options = ["On_The_Air", "DXPeditions", "Contests"];
+    const full_Options = [
+        "VOACAP_DEDX", "DX_Cluster", "DX_Wx", "Solar_Flux", "Planetary_K", "Moon", 
+        "NOAA_SpcWx", "Sunspot_N", "X-Ray", "SDO", "Solar_Wind", "DRAP", 
+        "Contests", "Live_Spots", "Bz_Bt", "On_The_Air", "Aurora", 
+        "DXPeditions", "Disturbance"
+    ];
+
+    window.onload = () => {
+        ipInput.value = localStorage.getItem('hc_ip') || '';
+        qthInput.value = localStorage.getItem('qth_lng') || '';
+        renderCheckboxes();
+    };
+
+    ipInput.oninput = () => localStorage.setItem('hc_ip', ipInput.value);
+    qthInput.oninput = () => localStorage.setItem('qth_lng', qthInput.value);
+
+    // Save current paneState to localStorage [cite: 1, 2]
+    function savePaneState() {
+        localStorage.setItem('paneState', JSON.stringify(paneState));
+    }
+
+    function togglePaneSection() {
+        const ps = document.getElementById('pane-section');
+        const isHidden = ps.style.display === 'none' || ps.style.display === '';
+        ps.style.display = isHidden ? 'block' : 'none';
+        window.resizeTo(385, isHidden ? 850 : 540);
+    }
+
+    function showTab(num) {
+        activeTab = num;
+        document.querySelectorAll('.tab-btn').forEach((b, i) => {
+            b.classList.toggle('active', i === num);
+        });
+        renderCheckboxes();
+    }
+
+    function renderCheckboxes() {
+        const container = document.getElementById('cb-container');
+        container.innerHTML = '';
+        const options = (activeTab === 0) ? p0_Options : full_Options;
+
+        options.forEach(opt => {
+            const isChecked = paneState[activeTab].includes(opt);
+            let isOwnedByOther = false;
+            for (let p in paneState) {
+                if (p != activeTab && paneState[p].includes(opt)) isOwnedByOther = true;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'cb-item';
+            if (isOwnedByOther) div.style.opacity = "0.5";
+            
+            div.innerHTML = `
+                <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="handleToggle('${opt}', this.checked)">
+                <span>${opt.replace(/_/g, ' ')}</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function handleToggle(opt, isChecked) {
+        if (isChecked) {
+            for (let p in paneState) {
+                if (p != activeTab) {
+                    const idx = paneState[p].indexOf(opt);
+                    if (idx > -1) {
+                        paneState[p].splice(idx, 1);
+                        sendPaneUpdate(p); 
+                    }
+                }
+            }
+            if (!paneState[activeTab].includes(opt)) paneState[activeTab].push(opt);
+        } else {
+            const idx = paneState[activeTab].indexOf(opt);
+            if (idx > -1) paneState[activeTab].splice(idx, 1);
+        }
+        
+        savePaneState(); // Keep the selection "sticky" [cite: 1, 2]
+        renderCheckboxes(); 
+        sendPaneUpdate(activeTab); 
+    }
+
+    function sendPaneUpdate(paneNum) {
+        const base = getBase(); if (!base) return;
+        flashStatus();
+        let list = paneState[paneNum].join(',');
+        if (list === "") list = "off"; 
+        fetch(`${base}/set_pane?Pane${paneNum}=${list}`, {mode: 'no-cors'});
+    }
+
+    function flashStatus() {
+        statusDot.classList.add('flash');
+        setTimeout(() => statusDot.classList.remove('flash'), 250);
+    }
+    function getBase() { return ipInput.value ? `http://${ipInput.value}:8080` : null; }
+    function setRSS(v) { let b = getBase(); if(b) fetch(`${b}/set_rss?${v}`, {mode:'no-cors'}); flashStatus(); }
+    function setNight(v) { let b = getBase(); if(b) fetch(`${b}/set_mapview?Night=${v}`, {mode:'no-cors'}); flashStatus(); }
+
+    async function setRobinson(lng) {
+        let b = getBase(); if(!b) return; flashStatus();
+        await fetch(`${b}/set_mapview?Projection=Mercator`, {mode:'no-cors'});
+        await fetch(`${b}/set_panzoom?pan_x=0&pan_y=0&zoom=1`, {mode:'no-cors'});
+        await new Promise(r => setTimeout(r, 150));
+        await fetch(`${b}/set_mapview?Projection=Robinson`, {mode:'no-cors'});
+        fetch(`${b}/set_mapcenter?lng=${lng}`, {mode:'no-cors'});
+    }
+
+    async function safePan(x, y, z) {
+        let b = getBase(); if(!b) return; flashStatus();
+        await fetch(`${b}/set_mapview?Projection=Mercator`, {mode:'no-cors'});
+        await fetch(`${b}/set_panzoom?pan_x=0&pan_y=0&zoom=1`, {mode:'no-cors'});
+        await fetch(`${b}/set_mapcenter?lng=0`, {mode:'no-cors'});
+        await new Promise(r => setTimeout(r, 250));
+        fetch(`${b}/set_panzoom?pan_x=${x}&pan_y=${y}&zoom=${z}`, {mode:'no-cors'});
+    }
+
+    async function goHome() {
+        let b = getBase(); let lng = qthInput.value; if(!b || !lng) return; flashStatus();
+        await fetch(`${b}/set_mapview?Projection=Mercator`, {mode:'no-cors'});
+        await fetch(`${b}/set_panzoom?pan_x=0&pan_y=0&zoom=1`, {mode:'no-cors'});
+        await new Promise(r => setTimeout(r, 150));
+        fetch(`${b}/set_mapcenter?lng=${lng}`, {mode:'no-cors'});
+    }
+</script>
+</body>
+</html>
